@@ -1,0 +1,122 @@
+% check if a number is even
+is_even(Number) :-
+    Number mod 2 =:= 0.
+
+% extract sequences of even numbers from a list
+% base case
+even_sequence([],[]).
+% head is even - add it to the sequence
+even_sequence([Head|Tail],[Head|EvenTail]) :-
+    is_even(Head),
+    even_sequence(Tail, EvenTail).
+% head is not even - skip it
+even_sequence([Head|Tail],EvenSequence) :-
+    \+ is_even(Head),
+    even_sequence(Tail, EvenSequence).
+
+
+% split a list into head and tail at the first occurrence of an odd number
+% useful for separating the first sequence of even numbers from the rest of the list
+% If the first element is odd split
+split_on_odd([Head|Tail], [], [Head|Tail]) :- 
+    \+ is_even(Head). 
+% base case
+split_on_odd([], [], []). 
+% for an even head keep it in the current sequence
+% recursively find where to split the rest of the list
+split_on_odd([Head|Tail], [Head|EvenTail], Rest) :-
+    is_even(Head),
+    split_on_odd(Tail, EvenTail, Rest).
+
+
+% extract all sequences of consecutive even numbers from a list
+% base case
+all_even_sequences([], []).
+% Split the list at the first odd number to get the first even sequence
+all_even_sequences(List, [Seq|Seqs]) :-
+    split_on_odd(List, Seq, Rest), 
+    Seq \= [], 
+    all_even_sequences(Rest, Seqs).
+% if the first element results in an empty sequence skip it
+all_even_sequences([_|Tail], Seqs) :-
+    all_even_sequences(Tail, Seqs).
+
+
+% predicate to find the longest list from a list of lists
+% base case - return the longest list found so far.
+longest_list([], CurrentLongest, CurrentLongest).
+% Calculate the length of the current head, current longest list, and compare
+longest_list([Head|Tail], CurrentLongest, Longest) :-
+    length(Head, LengthHead),
+    length(CurrentLongest, LengthCurrentLongest),
+    (   LengthHead > LengthCurrentLongest
+    ->  longest_list(Tail, Head, Longest)
+    ;   longest_list(Tail, CurrentLongest, Longest)
+    ).
+
+
+% main predicate to find the longest sequence of consecutive even numbers in a list
+longest_even_sequence(List, LongestSequence) :-
+    all_even_sequences(List, EvenSequences),  % extract all even sequences from the list
+    longest_list(EvenSequences, [], LongestSequence), !.  % find the longest sequence among them
+
+
+
+% b. replace each sublist in a list with its longest sequence of even numbers
+% base case
+replace_sublists_with_even_sequences([], []).
+replace_sublists_with_even_sequences([Head|Tail], [LongestEvenSeq|ReplacedTail]) :-
+    is_list(Head),
+    !,
+    longest_even_sequence(Head, LongestEvenSeq),  % replace the sublist with its longest even sequence
+    replace_sublists_with_even_sequences(Tail, ReplacedTail).  
+replace_sublists_with_even_sequences([Head|Tail], [Head|ReplacedTail]) :-
+    replace_sublists_with_even_sequences(Tail, ReplacedTail).  % If head is not a list continue
+
+
+-------------------------------------------------------------------------------------------------
+
+MATHEMATICAL MODELS:
+
+
+
+			   |-> true if n mod 2 = 0 
+is_even(Number) ----|
+			   |-> false otherwise
+
+
+
+
+									 |-> ([], l1, l2, ...,ln) if l1 is odd
+						   			 |
+split_on_odd(l1, l2, ..., ln) 			  -----|-> ([], []) if l = []
+									 |
+						   			 |-> ([l1 U preffix], suffix if l1 is even and split_on_odd(l2,l3,...,ln) = (preffix,suffix)
+
+preffix is the list of even numbers preceedint the first odd number and suffix is the remainder
+
+
+
+						   		 |-> ∅ if l = ∅
+						   		 |
+all_even_sequences(l1, l2, ..., ln) -----     |-> l1 U all_even_sequences(l2, ...,ln) if is_even(l1) = true
+						  		 |
+						   		 |-> all_even_sequences(l2, ..., ln) otherwise
+
+
+
+
+longest_list(l1,l2,...,ln, C) ------> C if list = []
+
+					  ------> max(l1, longest_list(l2,l3,..,ln,max(l1,C))) otherwise
+
+
+longest_even_sequence(l1,l2,..,ln) = longest_list(all_even_sequences(l1,l2,..,ln),∅)
+
+
+
+
+
+replace_sublists_with_even_sequences(l1,l2,..,ln) ----> [] if list = []
+								  -----> longest_even_sequence(l1) U replace_sublists_with_even_sequences(l2,l3,...,ln) if is_list(l1) = true
+						   	     	  -----> l1 U replace_sublists_with_even_sequences(l2,l3,...,ln) otherwise
